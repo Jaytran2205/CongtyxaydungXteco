@@ -143,11 +143,18 @@ npm run typecheck # TypeScript check
 npm run check  # Run lint + typecheck + build
 ```
 
-### If using docker
+### Deployment Architecture (Static Export)
+
+This project is configured for **Static Site Generation (SSG)** via Next.js (`output: "export"` in `next.config.ts`), generating 100% pre-rendered static assets into the `out/` directory:
+
+- **Security Benefits:** Zero Node.js server attack surface in production (immune to server-side RCE, SSRF, prototype pollution, or memory leaks).
+- **Hosting Options:**
+  - **CDN / Static Hosting (Vercel, Cloudflare Pages, Netlify, GitHub Pages, AWS S3):** Deploy the `out/` directory directly.
+  - **Docker (Nginx):** The production `Dockerfile` builds the project and serves the static files using lightweight, hardened `nginx:alpine` with security headers and gzip enabled.
 
 ```bash
-docker compose up app --build # build and run the app
-docker compose up dev --build # run the app in dev mode on port 3001
+docker compose up app --build # Build static site and run with Nginx on port 3000
+docker compose up dev --build # Run local development server with hot-reload on port 3001
 ```
 
 ## Updating for Other Platforms

@@ -1,114 +1,79 @@
-# SRC https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile
-
 # ============================================
 # Stage 1: Dependencies Installation Stage
 # ============================================
-
-# IMPORTANT: Node.js Version Maintenance
-# This Dockerfile defaults to Node.js 24.14.1-slim to match the repo's Node 24 baseline.
-# To ensure security and compatibility, update the NODE_VERSION ARG when the project's Node baseline changes.
-ARG NODE_VERSION=24.14.1-slim
+ARG NODE_VERSION=24-alpine
 
 FROM node:${NODE_VERSION} AS dependencies
 
-# Set working directory
 WORKDIR /app
 
-# Copy package-related files first to leverage Docker's caching mechanism
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+COPY package.json package-lock.json* ./
 
-# Install project dependencies with frozen lockfile for reproducible builds
 RUN --mount=type=cache,target=/root/.npm \
-  --mount=type=cache,target=/usr/local/share/.cache/yarn \
-  --mount=type=cache,target=/root/.local/share/pnpm/store \
-  if [ -f package-lock.json ]; then \
-  npm ci --no-audit --no-fund; \
-  elif [ -f yarn.lock ]; then \
-  corepack enable yarn && yarn install --frozen-lockfile --production=false; \
-  elif [ -f pnpm-lock.yaml ]; then \
-  corepack enable pnpm && pnpm install --frozen-lockfile; \
-  else \
-  echo "No lockfile found." && exit 1; \
-  fi
+  npm ci --no-audit --no-fund
 
 # ============================================
-# Stage 2: Build Next.js application in standalone mode
+# Stage 2: Build Next.js Static Export
 # ============================================
 
 FROM node:${NODE_VERSION} AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy project dependencies from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
-
-# Copy application source code
 COPY . .
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED=1
-
-# Build Next.js application
-# If you want to speed up Docker rebuilds, you can cache the build artifacts
-# by adding: --mount=type=cache,target=/app/.next/cache
-# This caches the .next/cache directory across builds, but it also prevents
-# .next/cache/fetch-cache from being included in the final image, meaning
-# cached fetch responses from the build won't be available at runtime.
-RUN if [ -f package-lock.json ]; then \
-  npm run build; \
-  elif [ -f yarn.lock ]; then \
-  corepack enable yarn && yarn build; \
-  elif [ -f pnpm-lock.yaml ]; then \
-  corepack enable pnpm && pnpm build; \
-  else \
-  echo "No lockfile found." && exit 1; \
-  fi
+RUN npm run build
 
 # ============================================
-# Stage 3: Run Next.js application
+# Stage 3: High-Performance Static Runner (Nginx)
 # ============================================
 
-FROM node:${NODE_VERSION} AS runner
+FROM nginx:alpine AS runner
 
-# Set working directory
-WORKDIR /app
+# Security: Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
 
-# Set production environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+# Copy static export artifacts from builder stage
+COPY --from=builder /app/out /usr/share/nginx/html
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the run time.
-# ENV NEXT_TELEMETRY_DISABLED=1
+# Custom hardened Nginx configuration with security headers & gzip
+RUN printf 'server {\n\
+    listen 80;\n\
+    server_name localhost;\n\
+    root /usr/share/nginx/html;\n\
+    index index.html;\n\
+\n\
+    add_header X-Frame-Options "SAMEORIGIN" always;\n\
+    add_header X-Content-Type-Options "nosniff" always;\n\
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;\n\
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;\n\
+\n\
+    gzip on;\n\
+    gzip_vary on;\n\
+    gzip_proxied any;\n\
+    gzip_comp_level 6;\n\
+    gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;\n\
+\n\
+    location ~* \\.(?:css|js|jpg|jpeg|gif|png|ico|cur|gz|svg|svgz|mp4|ogg|ogv|webm|htc|woff|woff2)$ {\n\
+        expires 1y;\n\
+        add_header Cache-Control "public, immutable";\n\
+        access_log off;\n\
+    }\n\
+\n\
+    location / {\n\
+        try_files $uri $uri/ $uri.html /index.html =404;\n\
+    }\n\
+\n\
+    error_page 404 /404.html;\n\
+}\n' > /etc/nginx/conf.d/default.conf
 
-# Copy production assets
-COPY --from=builder --chown=node:node /app/public ./public
+EXPOSE 80
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown node:node .next
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:80/ || exit 1
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-
-# If you want to persist the fetch cache generated during the build so that
-# cached responses are available immediately on startup, uncomment this line:
-# COPY --from=builder --chown=node:node /app/.next/cache ./.next/cache
-
-# Switch to non-root user for security best practices
-USER node
-
-# Expose port 3000 to allow HTTP traffic
-EXPOSE 3000
-
-# Start Next.js standalone server
-CMD ["node", "server.js"]
+CMD ["nginx", "-g", "daemon off;"]

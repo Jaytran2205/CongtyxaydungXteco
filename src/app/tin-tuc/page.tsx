@@ -3,7 +3,6 @@
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import NewsSection from "@/components/news-section";
-import Image from "next/image";
 
 export default function NewsPage() {
   return (

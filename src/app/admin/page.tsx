@@ -156,7 +156,7 @@ export default function AdminPage() {
     });
   };
 
-  const handleJobChange = (index: number, field: string, value: any) => {
+  const handleJobChange = (index: number, field: string, value: unknown) => {
     setEditedData((prev) => {
       const careers = prev.careers;
       if (!careers) return prev;

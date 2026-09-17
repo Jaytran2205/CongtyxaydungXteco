@@ -433,7 +433,9 @@ export function WebDataProvider({ children }: { children: React.ReactNode }) {
     try {
       const savedLang = localStorage.getItem("xteco_lang") as Language;
       if (savedLang === "vi" || savedLang === "en") {
-        setLanguageState(savedLang);
+        setTimeout(() => {
+          setLanguageState(savedLang);
+        }, 0);
       }
     } catch (e) {
       console.error("Failed to load language: ", e);

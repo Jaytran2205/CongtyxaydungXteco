@@ -39,10 +39,11 @@ yarn-error.log*
 .cursor/
 .gemini/
 .claude/
-.github/
+.github/hooks/
+.github/skills/
 .impeccable/
 .opencode/
-prompt-kiem-tra-bao-mat-source-code.md
+prompt-*.md
 
 # OS
 .DS_Store

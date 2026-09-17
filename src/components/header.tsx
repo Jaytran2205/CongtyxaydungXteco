@@ -5,21 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useWebData } from "@/context/web-data-context";
 import { usePathname } from "next/navigation";
-import { SearchIcon, MenuIcon, AngleDownIcon, CloseIcon } from "@/components/icons";
-
-const menuItems: Array<{
-  name: string;
-  href: string;
-  dropdown?: Array<{ name: string; href: string }>;
-}> = [
-  { name: "Trang chủ", href: "/" },
-  { name: "Về chúng tôi", href: "/ve-chung-toi" },
-  { name: "Lĩnh vực", href: "/linh-vuc" },
-  { name: "Dự án", href: "/du-an" },
-  { name: "Tin tức", href: "/tin-tuc" },
-  { name: "Hợp tác", href: "/lien-he" },
-  { name: "Tuyển dụng", href: "/tuyen-dung" },
-];
+import { SearchIcon, MenuIcon, CloseIcon } from "@/components/icons";
 
 export default function Header() {
   const { data, language, setLanguage, t } = useWebData();
@@ -29,6 +15,7 @@ export default function Header() {
 
   const pathname = usePathname();
   const isHomepage = pathname === "/";
+  const effectiveScrolled = !isHomepage || isScrolled;
 
   const menuItems = [
     { name: t.nav.home, href: "/" },
@@ -41,10 +28,7 @@ export default function Header() {
   ];
 
   useEffect(() => {
-    if (!isHomepage) {
-      setIsScrolled(true);
-      return;
-    }
+    if (!isHomepage) return;
 
     const handleScroll = () => {
       const scrollPos =
@@ -56,7 +40,6 @@ export default function Header() {
       setIsScrolled(scrollPos > 20);
     };
 
-    // Initial check
     handleScroll();
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -72,13 +55,13 @@ export default function Header() {
     <>
       <header
         className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-          isScrolled
+          effectiveScrolled
             ? "bg-white/95 backdrop-blur-md shadow-md py-2 text-gray-800"
             : "bg-[#ffffff]/80 backdrop-blur-md border-b border-gray-200/60 py-3 text-gray-800"
         }`}
       >
         {/* Top bar */}
-        {!isScrolled && (
+        {!effectiveScrolled && (
           <div className="hidden lg:block border-b border-gray-200/60 pb-2 mb-2 text-xs md:text-sm text-gray-600">
             <div className="max-w-[1200px] mx-auto px-4 flex justify-between items-center">
               <div className="font-bold text-[#2f5597] tracking-wide">{language === "vi" ? "Tổng thầu Thiết kế và Thi công trọn gói" : "General Contractor for Design & Construction"}</div>

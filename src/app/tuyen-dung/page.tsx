@@ -4,7 +4,6 @@ import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { useWebData } from "@/context/web-data-context";
 import { Briefcase, MapPin, Calendar, ArrowRight, Clock, AlertCircle, CheckCircle2, Mail } from "lucide-react";
-import Link from "next/link";
 
 export default function CareersPage() {
   const { data } = useWebData();

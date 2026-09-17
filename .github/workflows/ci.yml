@@ -1,36 +1,36 @@
-name: CI
+name: CI & Security Audit
 
 on:
   push:
-    branches:
-      - master
+    branches: [main, master]
   pull_request:
-    branches:
-      - master
+    branches: [main, master]
 
 jobs:
-  quality:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
+          node-version: '24'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
+      - name: Security Audit (Fail on High/Critical)
+        run: npm audit --audit-level=high
+
+      - name: Run ESLint
         run: npm run lint
 
-      - name: Type check
+      - name: Run TypeScript check
         run: npm run typecheck
 
-      - name: Build
+      - name: Build Next.js Static Export
         run: npm run build
