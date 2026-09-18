@@ -16,6 +16,15 @@ export const metadata: Metadata = {
   title: "XTÉCO | Chuyên gia Xây dựng theo tiêu chuẩn quốc tế",
   description:
     "Xtéco ra đời với mong muốn thay đổi cách thức xây dựng và quy chuẩn về một công trình chất lượng của người Việt.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
