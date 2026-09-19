@@ -349,8 +349,8 @@ const initialDefaultData: WebData = {
   },
   quickContact: {
     zaloUrl: "https://zalo.me/0836289589",
-    hotline: "0899984988",
-    hotlineLabel: "089 998 49 88",
+    hotline: "0836289589",
+    hotlineLabel: "0836.289.589",
   },
   careers: {
     bannerTitle: "Tuyển Dụng Nhân Tài",
@@ -442,16 +442,27 @@ export function WebDataProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const saved = localStorage.getItem("xteco_web_data_v14");
+      const saved = localStorage.getItem("xteco_web_data_v15") || localStorage.getItem("xteco_web_data_v14");
       if (saved) {
         setTimeout(() => {
           const parsed = JSON.parse(saved);
-          setData({
+          // Migrate old placeholder hotline if present
+          if (parsed.quickContact?.hotline === "0899984988") {
+            parsed.quickContact.hotline = "0836289589";
+            parsed.quickContact.hotlineLabel = "0836.289.589";
+          }
+          const mergedData = {
             ...initialDefaultData,
             ...parsed,
+            quickContact: {
+              ...initialDefaultData.quickContact,
+              ...(parsed.quickContact || {}),
+            },
             services: parsed.services ? { ...initialDefaultData.services, ...parsed.services } : initialDefaultData.services,
             careers: parsed.careers ? { ...initialDefaultData.careers, ...parsed.careers } : initialDefaultData.careers,
-          });
+          };
+          setData(mergedData);
+          localStorage.setItem("xteco_web_data_v15", JSON.stringify(mergedData));
         }, 0);
       }
     } catch (e) {
@@ -468,6 +479,21 @@ export function WebDataProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Failed to load consultations: ", e);
     }
+
+    // Cross-tab real-time synchronization
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "xteco_web_data_v15" && e.newValue) {
+        try {
+          setData(JSON.parse(e.newValue));
+        } catch (err) {
+          console.error("Failed to sync storage change across tabs: ", err);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const setLanguage = (lang: Language) => {
@@ -482,7 +508,7 @@ export function WebDataProvider({ children }: { children: React.ReactNode }) {
   const updateData = (newData: WebData) => {
     setData(newData);
     try {
-      localStorage.setItem("xteco_web_data_v14", JSON.stringify(newData));
+      localStorage.setItem("xteco_web_data_v15", JSON.stringify(newData));
     } catch (e) {
       console.error("Failed to save local storage content: ", e);
     }

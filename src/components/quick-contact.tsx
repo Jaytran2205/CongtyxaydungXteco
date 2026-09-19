@@ -15,8 +15,9 @@ export default function QuickContact() {
 
   // Fallback defaults
   const zaloUrl = data.quickContact?.zaloUrl || "https://zalo.me/0836289589";
-  const hotline = data.quickContact?.hotline || "0899984988";
-  const hotlineLabel = data.quickContact?.hotlineLabel || "089 998 49 88";
+  const rawHotline = data.quickContact?.hotline || "0836289589";
+  const cleanHotline = rawHotline.replace(/[^\d]/g, "") || "0836289589";
+  const hotlineLabel = data.quickContact?.hotlineLabel || "0836.289.589";
 
   return (
     <div className="fixed bottom-8 left-6 flex flex-col gap-3.5 z-50 items-start pointer-events-auto">
@@ -52,7 +53,7 @@ export default function QuickContact() {
 
       {/* 3. Phone Hotline Capsule */}
       <a
-        href={`tel:${hotline}`}
+        href={`tel:${cleanHotline}`}
         className="flex items-center bg-[#ba3434] text-white rounded-full shadow-lg hover:shadow-red-950/20 transition-all duration-300 hover:scale-103 group overflow-hidden h-11 w-11 hover:w-[185px] cursor-pointer relative"
       >
         {/* Pulse effect overlay circle */}

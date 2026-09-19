@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWebData, WebData } from "@/context/web-data-context";
 import { Plus, Trash2, ArrowLeft, Save, LogIn } from "lucide-react";
@@ -15,6 +15,15 @@ export default function AdminPage() {
 
   // Form states copied from context
   const [editedData, setEditedData] = useState<WebData>(data);
+
+  // Keep editedData in sync when context data loads/updates
+  useEffect(() => {
+    if (data) {
+      setTimeout(() => {
+        setEditedData(data);
+      }, 0);
+    }
+  }, [data]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,10 +43,24 @@ export default function AdminPage() {
   };
 
   const updateGeneral = (field: keyof WebData["general"], value: string) => {
-    setEditedData((prev) => ({
-      ...prev,
-      general: { ...prev.general, [field]: value },
-    }));
+    setEditedData((prev) => {
+      const next = {
+        ...prev,
+        general: { ...prev.general, [field]: value },
+      };
+      // When updating general hotline, also automatically sync floating quickContact
+      if (field === "hotline") {
+        const cleanDigits = value.replace(/[^\d]/g, "").slice(0, 10);
+        if (cleanDigits) {
+          next.quickContact = {
+            ...next.quickContact,
+            hotline: cleanDigits,
+            hotlineLabel: value.split("–")[0].trim() || cleanDigits,
+          };
+        }
+      }
+      return next;
+    });
   };
 
   const updateHero = (field: keyof WebData["hero"], value: string) => {
@@ -211,55 +234,57 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0f1d] text-white flex flex-col">
-      {/* Admin Header */}
-      <header className="border-b border-white/10 bg-black/40 backdrop-blur-md py-4 px-6 sticky top-0 z-30 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-gray-400 hover:text-white flex items-center gap-1 text-sm font-semibold">
-            <ArrowLeft className="w-4 h-4" /> Trang chủ
+    <main className="min-h-screen bg-[#0a0f1d] text-white flex flex-col pb-16 md:pb-0">
+      {/* Admin Header: Responsive for smartphone & desktop */}
+      <header className="border-b border-white/10 bg-black/60 backdrop-blur-md py-3 px-3 sm:px-6 sticky top-0 z-30 flex justify-between items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <Link href="/" className="text-gray-400 hover:text-white flex items-center gap-1 text-xs sm:text-sm font-semibold shrink-0">
+            <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Trang chủ</span>
           </Link>
-          <div className="w-[1px] h-4 bg-white/20"></div>
-          <h1 className="text-base font-bold tracking-wider">BẢNG ĐIỀU KHIỂN QUẢN TRỊ (XTÉCO)</h1>
+          <div className="w-[1px] h-4 bg-white/20 shrink-0"></div>
+          <h1 className="text-xs sm:text-base font-bold tracking-wider truncate">
+            QUẢN TRỊ <span className="hidden sm:inline">(XTÉCO)</span>
+          </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Link
             href="/"
             target="_blank"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg transition-colors"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 text-white text-[11px] sm:text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
           >
-            Xem Website ↗
+            <span className="hidden sm:inline">Xem </span>Web ↗
           </Link>
           <button
             onClick={handleSave}
-            className="bg-[#ba3434] hover:bg-[#a02c2c] text-white text-xs font-bold uppercase tracking-wider py-2 px-6 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-red-950/30 transition-all cursor-pointer"
+            className="bg-[#ba3434] hover:bg-[#a02c2c] text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider py-1.5 sm:py-2 px-3 sm:px-6 rounded-lg flex items-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-red-950/30 transition-all cursor-pointer whitespace-nowrap"
           >
-            <Save className="w-4 h-4" /> Lưu cấu hình
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span>Lưu<span className="hidden sm:inline"> cấu hình</span></span>
           </button>
         </div>
       </header>
 
       <div className="flex-grow flex flex-col md:flex-row">
-        {/* Admin Sidebar Navigation */}
-        <aside className="w-full md:w-64 border-r border-white/10 bg-black/20 p-6 flex flex-col gap-2">
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-2">Các danh mục chỉnh sửa</span>
+        {/* Admin Sidebar Navigation: Responsive horizontal scroll on mobile, vertical on desktop */}
+        <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 bg-black/40 p-2 sm:p-4 md:p-6 flex flex-row md:flex-col gap-1.5 md:gap-2 overflow-x-auto md:overflow-x-visible shrink-0 sticky top-[49px] sm:top-[57px] md:static z-20 backdrop-blur-md">
+          <span className="hidden md:block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-2">Các danh mục chỉnh sửa</span>
           {[
             { id: "general", label: "Thông tin chung" },
-            { id: "hero", label: "Hero Banner (Video)" },
+            { id: "hero", label: "Hero Banner" },
             { id: "about", label: "Giới thiệu & CEO" },
-            { id: "services", label: "Lĩnh vực dịch vụ" },
-            { id: "highlights", label: "Năng lực, Tầm nhìn" },
+            { id: "services", label: "Dịch vụ" },
+            { id: "highlights", label: "Năng lực & Tầm nhìn" },
             { id: "projects", label: "Dự án nổi bật" },
             { id: "contact_news", label: "Liên hệ & Tin tức" },
-            { id: "careers", label: "Quản lý Tuyển dụng" },
-            { id: "consultations", label: `Quản lý Đặt lịch (${consultations.length})` },
+            { id: "careers", label: "Tuyển dụng" },
+            { id: "consultations", label: `Đặt lịch (${consultations.length})` },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full text-left py-2 px-4 rounded text-sm font-medium transition-all duration-200 ${
+              className={`whitespace-nowrap shrink-0 md:shrink md:w-full text-left py-1.5 md:py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
                 activeTab === tab.id
-                  ? "bg-[#2f5597] text-white shadow"
+                  ? "bg-[#2f5597] text-white shadow font-semibold"
                   : "text-gray-400 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -269,7 +294,7 @@ export default function AdminPage() {
         </aside>
 
         {/* Admin Form Panel */}
-        <section className="flex-grow p-6 md:p-10 max-w-4xl">
+        <section className="flex-grow p-4 sm:p-6 md:p-10 max-w-4xl w-full overflow-x-hidden">
           {/* Tab 1: General Info */}
           {activeTab === "general" && (
             <div className="flex flex-col gap-6">
@@ -393,7 +418,7 @@ export default function AdminPage() {
                           }))
                         }
                         className="px-3 py-2 bg-white/5 border border-white/10 rounded focus:outline-none focus:ring-1 focus:ring-[#2f5597] text-sm text-white"
-                        placeholder="0899984988"
+                        placeholder="0836289589"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -411,7 +436,7 @@ export default function AdminPage() {
                           }))
                         }
                         className="px-3 py-2 bg-white/5 border border-white/10 rounded focus:outline-none focus:ring-1 focus:ring-[#2f5597] text-sm text-white"
-                        placeholder="089 998 49 88"
+                        placeholder="0836.289.589"
                       />
                     </div>
                   </div>
@@ -1266,9 +1291,22 @@ export default function AdminPage() {
         </section>
       </div>
 
+      {/* Mobile Floating Action Bar for easy saving on smartphones */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 bg-black/90 backdrop-blur-xl border-t border-white/10 flex justify-between items-center z-30 shadow-2xl">
+        <div className="text-[11px] text-gray-300 truncate max-w-[170px]">
+          <span className="font-semibold text-white">XTÉCO</span> Quản trị
+        </div>
+        <button
+          onClick={handleSave}
+          className="bg-[#ba3434] active:bg-[#a02c2c] text-white text-xs font-bold uppercase tracking-wider py-2 px-5 rounded-lg flex items-center gap-1.5 shadow-lg cursor-pointer"
+        >
+          <Save className="w-4 h-4" /> Lưu cấu hình
+        </button>
+      </div>
+
       {/* Save Success Toast */}
       {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#2f5597] text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slideIn">
+        <div className="fixed bottom-16 md:bottom-6 right-4 sm:right-6 z-50 bg-[#2f5597] text-white px-5 sm:px-6 py-3.5 sm:py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slideIn">
           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center font-bold">✓</div>
           <div>
             <h5 className="font-bold text-sm">Lưu thành công!</h5>
